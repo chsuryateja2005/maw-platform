@@ -1,0 +1,157 @@
+type VendorStatus = 
+ variant {
+   approved;
+   pending;
+   rejected;
+ };
+type Vendor = 
+ record {
+   brandName: text;
+   companyName: text;
+   createdAt: Timestamp;
+   email: text;
+   id: nat;
+   productsCount: nat;
+   status: VendorStatus;
+ };
+type UserRole = 
+ variant {
+   admin;
+   guest;
+   user;
+ };
+type UserId = principal;
+type UserApprovalInfo = 
+ record {
+   "principal": principal;
+   status: ApprovalStatus;
+ };
+type Timestamp = int;
+type TicketStatus = 
+ variant {
+   closed;
+   in_progress;
+   open;
+   resolved;
+ };
+type TicketPriority = 
+ variant {
+   high;
+   low;
+   medium;
+   urgent;
+ };
+type TicketMessage = 
+ record {
+   message: text;
+   sender: text;
+   timestamp: Timestamp;
+ };
+type Ticket = 
+ record {
+   createdAt: Timestamp;
+   customerId: UserId;
+   customerName: text;
+   id: nat;
+   messages: vec TicketMessage;
+   priority: TicketPriority;
+   status: TicketStatus;
+   subject: text;
+ };
+type ShipmentStatus = 
+ variant {
+   arriving;
+   dispatched;
+   processing;
+   received;
+ };
+type Shipment = 
+ record {
+   destination: text;
+   id: nat;
+   origin: text;
+   productsCount: nat;
+   receivedAt: opt Timestamp;
+   status: ShipmentStatus;
+ };
+type Product = 
+ record {
+   category: text;
+   description: text;
+   id: nat;
+   imageUrl: text;
+   name: text;
+   price: float64;
+   rating: float64;
+   stock: nat;
+ };
+type OrderStatus = 
+ variant {
+   cancelled;
+   confirmed;
+   delivered;
+   pending;
+   processing;
+   returned;
+   shipped;
+ };
+type OrderItem = 
+ record {
+   name: text;
+   price: float64;
+   productId: nat;
+   quantity: nat;
+ };
+type Order = 
+ record {
+   createdAt: Timestamp;
+   id: nat;
+   items: vec OrderItem;
+   status: OrderStatus;
+   total: float64;
+   userId: UserId;
+ };
+type DeliveryStatus = 
+ variant {
+   assigned;
+   delivered;
+   failed;
+   in_transit;
+ };
+type Delivery = 
+ record {
+   address: text;
+   assignedAt: Timestamp;
+   customerName: text;
+   id: nat;
+   itemsCount: nat;
+   orderId: nat;
+   status: DeliveryStatus;
+ };
+type ApprovalStatus = 
+ variant {
+   approved;
+   pending;
+   rejected;
+ };
+service : {
+  _initializeAccessControl: () -> ();
+  assignCallerUserRole: (user: principal, role: UserRole) -> ();
+  getCallerUserRole: () -> (UserRole) query;
+  getDeliveries: () -> (vec Delivery) query;
+  getOrders: () -> (vec Order) query;
+  getProducts: () -> (vec Product) query;
+  getShipments: () -> (vec Shipment) query;
+  getTickets: () -> (vec Ticket) query;
+  getVendors: () -> (vec Vendor) query;
+  isCallerAdmin: () -> (bool) query;
+  isCallerApproved: () -> (bool) query;
+  listApprovals: () -> (vec UserApprovalInfo) query;
+  requestApproval: () -> ();
+  setApproval: (user: principal, status: ApprovalStatus) -> ();
+  updateDeliveryStatus: (id: nat, status: DeliveryStatus) -> ();
+  updateOrderStatus: (id: nat, status: OrderStatus) -> ();
+  updateShipmentStatus: (id: nat, status: ShipmentStatus) -> ();
+  updateTicketStatus: (id: nat, status: TicketStatus) -> ();
+  updateVendorStatus: (id: nat, status: VendorStatus) -> ();
+}

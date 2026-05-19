@@ -1,0 +1,147 @@
+// Version: 1.0.0
+type ApprovalStatus__944573617 = {#approved; #pending; #rejected};
+type Data__791452850<K, V> =
+  {var count : Nat__490723111; kvs : [var ?(K, V)]};
+type DeliveryStatus__208436166 =
+  {#assigned; #delivered; #failed; #in_transit};
+type Delivery__1018274548 =
+  {
+    address : Text;
+    assignedAt : Timestamp__301639476;
+    customerName : Text;
+    id : Nat;
+    itemsCount : Nat;
+    orderId : Nat;
+    status : DeliveryStatus__208436166
+  };
+type Internal__8484328<K, V> =
+  {children : [var ?Node__46230540<K, V>]; data : Data__791452850<K, V>};
+type Leaf__809889148<K, V> = {data : Data__791452850<K, V>};
+type Map__158565046<K, V> = Map__297112838<K, V>;
+type Map__297112838<K, V> =
+  {var root : Node__46230540<K, V>; var size : Nat__490723111};
+type Map__605269027<K, V> = Map__158565046<K, V>;
+type Nat__490723111 = Nat__920180692;
+type Nat__920180692 = Nat;
+type Node__46230540<K, V> =
+  {#internal : Internal__8484328<K, V>; #leaf : Leaf__809889148<K, V>};
+type OrderItem__241319351 =
+  {name : Text; price : Float; productId : Nat; quantity : Nat};
+type OrderStatus__272730104 =
+  {
+    #cancelled;
+    #confirmed;
+    #delivered;
+    #pending;
+    #processing;
+    #returned;
+    #shipped
+  };
+type Order__141779993 =
+  {
+    createdAt : Timestamp__301639476;
+    id : Nat;
+    items : [OrderItem__241319351];
+    status : OrderStatus__272730104;
+    total : Float;
+    userId : UserId__158757552
+  };
+type Product__750902660 =
+  {
+    category : Text;
+    description : Text;
+    id : Nat;
+    imageUrl : Text;
+    name : Text;
+    price : Float;
+    rating : Float;
+    stock : Nat
+  };
+type ShipmentStatus__920686463 =
+  {#arriving; #dispatched; #processing; #received};
+type Shipment__303952542 =
+  {
+    destination : Text;
+    id : Nat;
+    origin : Text;
+    productsCount : Nat;
+    receivedAt : ?Timestamp__301639476;
+    status : ShipmentStatus__920686463
+  };
+type TicketMessage__170745503 =
+  {message : Text; sender : Text; timestamp : Timestamp__301639476};
+type TicketPriority__726148877 = {#high; #low; #medium; #urgent};
+type TicketStatus__903820774 = {#closed; #in_progress; #open; #resolved};
+type Ticket__555771949 =
+  {
+    createdAt : Timestamp__301639476;
+    customerId : UserId__158757552;
+    customerName : Text;
+    id : Nat;
+    messages : [TicketMessage__170745503];
+    priority : TicketPriority__726148877;
+    status : TicketStatus__903820774;
+    subject : Text
+  };
+type Timestamp__301639476 = Int;
+type UserId__158757552 = Principal;
+type UserRole__1073662873 = {#admin; #guest; #user};
+type VendorStatus__605994255 = {#approved; #pending; #rejected};
+type Vendor__457245463 =
+  {
+    brandName : Text;
+    companyName : Text;
+    createdAt : Timestamp__301639476;
+    email : Text;
+    id : Nat;
+    productsCount : Nat;
+    status : VendorStatus__605994255
+  };
+actor {
+  stable accessControlState :
+    {
+      var adminAssigned : Bool;
+      userRoles : Map__605269027<Principal, UserRole__1073662873>
+    };
+  stable approvalState :
+    {
+      var approvalStatus :
+        Map__605269027<Principal, ApprovalStatus__944573617>
+    };
+  stable deliveries :
+    {
+      var blockIndex : Nat__490723111;
+      var blocks : [var [var ?Delivery__1018274548]];
+      var elementIndex : Nat__490723111
+    };
+  stable orders :
+    {
+      var blockIndex : Nat__490723111;
+      var blocks : [var [var ?Order__141779993]];
+      var elementIndex : Nat__490723111
+    };
+  stable products :
+    {
+      var blockIndex : Nat__490723111;
+      var blocks : [var [var ?Product__750902660]];
+      var elementIndex : Nat__490723111
+    };
+  stable shipments :
+    {
+      var blockIndex : Nat__490723111;
+      var blocks : [var [var ?Shipment__303952542]];
+      var elementIndex : Nat__490723111
+    };
+  stable tickets :
+    {
+      var blockIndex : Nat__490723111;
+      var blocks : [var [var ?Ticket__555771949]];
+      var elementIndex : Nat__490723111
+    };
+  stable vendors :
+    {
+      var blockIndex : Nat__490723111;
+      var blocks : [var [var ?Vendor__457245463]];
+      var elementIndex : Nat__490723111
+    }
+};

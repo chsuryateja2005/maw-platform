@@ -1,0 +1,28 @@
+{
+  "overview": "MAW (Mobile Accessories Warehouse) is a complete enterprise ecosystem platform with 6 portals: Admin dashboard, Collaboration/vendor registration, Customer e-commerce storefront, Warehouse Manager, Delivery management, and Support ticketing. Each portal has its own professional layout, navigation, KPI dashboards, and sample data.",
+  "features": [
+    "6 fully-routed portals with working navigation",
+    "Admin dashboard with charts, vendor management, product and analytics pages",
+    "Customer e-commerce storefront with home, products, cart, checkout, orders, wishlist, profile",
+    "Collaboration portal for vendor registration and application status",
+    "Warehouse Manager portal with shipments, inventory, and dispatch",
+    "Delivery portal with delivery list, detail, and OTP confirmation",
+    "Support portal with ticketing system and live chat UI",
+    "Smooth page transitions and animated KPI counters",
+    "Dark sidebar theme for admin/manager/delivery, light theme for customer/collaboration/support",
+    "Role-based access and protected routes via authorization extension"
+  ],
+  "category": "enterprise",
+  "tags": [
+    "marketplace",
+    "enterprise",
+    "dashboard",
+    "e-commerce",
+    "logistics",
+    "multi-portal",
+    "warehouse",
+    "delivery",
+    "support"
+  ],
+  "last_updated": "2026-05-19T05:20:33.918Z"
+}
