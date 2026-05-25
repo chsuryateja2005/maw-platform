@@ -46,11 +46,11 @@ const userGrowth = Array.from({ length: 30 }, (_, idx) => ({
 }));
 
 const pieData = [
-  { name: "Electronics", value: 42 },
-  { name: "Furniture", value: 18 },
-  { name: "Office", value: 14 },
-  { name: "Apparel", value: 16 },
-  { name: "Other", value: 10 },
+  { name: "Phone Cases", value: 42 },
+  { name: "Chargers & Cables", value: 18 },
+  { name: "Power Banks", value: 14 },
+  { name: "Earphones", value: 16 },
+  { name: "Accessories", value: 10 },
 ];
 
 const PIE_COLORS = ["#6366f1", "#8b5cf6", "#06b6d4", "#10b981", "#94a3b8"];
@@ -116,10 +116,13 @@ function AdminAnalyticsContent() {
                 tick={{ fontSize: 11, fill: "#94a3b8" }}
                 axisLine={false}
                 tickLine={false}
-                tickFormatter={(v: number) => `$${(v / 1000).toFixed(0)}k`}
+                tickFormatter={(v: number) => `₹${(v / 1000).toFixed(0)}k`}
               />
               <Tooltip
-                formatter={(v: number) => [`$${v.toLocaleString()}`, "Revenue"]}
+                formatter={(v: number) => [
+                  `₹${v.toLocaleString("en-IN")}`,
+                  "Revenue",
+                ]}
                 contentStyle={tooltipStyle}
               />
               <Line
@@ -157,7 +160,7 @@ function AdminAnalyticsContent() {
                 tickLine={false}
               />
               <Tooltip
-                formatter={(v: number) => [v, "Orders"]}
+                formatter={(v: number) => [v.toLocaleString("en-IN"), "Orders"]}
                 contentStyle={tooltipStyle}
               />
               <Bar dataKey="orders" fill="#8b5cf6" radius={[4, 4, 0, 0]} />
@@ -196,7 +199,7 @@ function AdminAnalyticsContent() {
                 domain={["auto", "auto"]}
               />
               <Tooltip
-                formatter={(v: number) => [v.toLocaleString(), "Users"]}
+                formatter={(v: number) => [v.toLocaleString("en-IN"), "Users"]}
                 contentStyle={tooltipStyle}
               />
               <Area

@@ -1,89 +1,18 @@
+import { createActor } from "@/backend";
+import type { VendorRequest } from "@/backend";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { StatBadge } from "@/components/ui/StatBadge";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { DarkSidebarLayout } from "@/layouts/DarkSidebarLayout";
 import { VendorStatus } from "@/types";
-import { LayoutDashboard } from "lucide-react";
+import { useActor } from "@caffeineai/core-infrastructure";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Inbox, LayoutDashboard } from "lucide-react";
 import { motion } from "motion/react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { NAV_ITEMS } from "./adminNav";
-
-interface VendorRow {
-  id: string;
-  company: string;
-  brand: string;
-  email: string;
-  products: number;
-  status: VendorStatus;
-}
-
-const VENDORS: VendorRow[] = [
-  {
-    id: "v-001",
-    company: "TechGear Solutions",
-    brand: "TechGear",
-    email: "ops@techgear.io",
-    products: 248,
-    status: VendorStatus.approved,
-  },
-  {
-    id: "v-002",
-    company: "NovaBrands Co.",
-    brand: "NovaBrands",
-    email: "hello@novabrands.com",
-    products: 128,
-    status: VendorStatus.pending,
-  },
-  {
-    id: "v-003",
-    company: "Urban Essentials Ltd",
-    brand: "UrbanEss",
-    email: "trade@urbaness.net",
-    products: 92,
-    status: VendorStatus.approved,
-  },
-  {
-    id: "v-004",
-    company: "Horizon Goods Inc.",
-    brand: "HorizonG",
-    email: "supply@horizongoods.com",
-    products: 317,
-    status: VendorStatus.rejected,
-  },
-  {
-    id: "v-005",
-    company: "PrimeCraft Industries",
-    brand: "PrimeCraft",
-    email: "b2b@primecraft.in",
-    products: 0,
-    status: VendorStatus.pending,
-  },
-  {
-    id: "v-006",
-    company: "SwiftDeal Corp",
-    brand: "SwiftDeal",
-    email: "vendor@swiftdeal.co",
-    products: 185,
-    status: VendorStatus.approved,
-  },
-  {
-    id: "v-007",
-    company: "Apex Retail Group",
-    brand: "ApexRetail",
-    email: "apexretail@apex.com",
-    products: 402,
-    status: VendorStatus.approved,
-  },
-  {
-    id: "v-008",
-    company: "Verdant Market",
-    brand: "Verdant",
-    email: "info@verdantmarket.io",
-    products: 0,
-    status: VendorStatus.pending,
-  },
-];
 
 type FilterTab = "all" | VendorStatus;
 
@@ -94,28 +23,80 @@ const TABS: { id: FilterTab; label: string }[] = [
   { id: VendorStatus.rejected, label: "Rejected" },
 ];
 
+function useVendorRequests() {
+  const { actor, isFetching: actorFetching } = useActor(createActor);
+  return useQuery<VendorRequest[]>({
+    queryKey: ["vendorRequests"],
+    queryFn: async () => {
+      if (!actor) return [];
+      return actor.getVendorRequests();
+    },
+    enabled: !!actor && !actorFetching,
+    refetchInterval: 5000,
+  });
+}
+
+function useUpdateVendorRequestStatus() {
+  const { actor } = useActor(createActor);
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      id,
+      status,
+    }: {
+      id: bigint;
+      status: VendorStatus;
+    }) => {
+      if (!actor) throw new Error("Actor not available");
+      return actor.updateVendorRequestStatus(id, status);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["vendorRequests"] });
+    },
+  });
+}
+
+function formatDate(ts: bigint): string {
+  return new Date(Number(ts) / 1_000_000).toLocaleDateString("en-IN", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+}
+
 function AdminVendorsContent() {
   const [activeTab, setActiveTab] = useState<FilterTab>("all");
-  const [vendorStatuses, setVendorStatuses] = useState<
-    Record<string, VendorStatus>
-  >(() => Object.fromEntries(VENDORS.map((v) => [v.id, v.status])));
+  const { data: requests = [], isLoading } = useVendorRequests();
+  const updateStatus = useUpdateVendorRequestStatus();
 
-  const filtered = VENDORS.filter((v) =>
-    activeTab === "all" ? true : vendorStatuses[v.id] === activeTab,
+  const filtered = requests.filter((v) =>
+    activeTab === "all" ? true : v.status === activeTab,
   );
 
-  function handleApprove(v: VendorRow) {
-    setVendorStatuses((prev) => ({ ...prev, [v.id]: VendorStatus.approved }));
-    toast.success(`${v.company} approved`, {
-      description: "Vendor can now list products.",
-    });
+  function handleApprove(v: VendorRequest) {
+    updateStatus.mutate(
+      { id: v.id, status: VendorStatus.approved },
+      {
+        onSuccess: () =>
+          toast.success(`${v.companyName} approved`, {
+            description: "Vendor can now list products.",
+          }),
+        onError: () => toast.error("Failed to approve vendor"),
+      },
+    );
   }
 
-  function handleReject(v: VendorRow) {
-    setVendorStatuses((prev) => ({ ...prev, [v.id]: VendorStatus.rejected }));
-    toast.error(`${v.company} rejected`, {
-      description: "Vendor access has been revoked.",
-    });
+  function handleReject(v: VendorRequest) {
+    updateStatus.mutate(
+      { id: v.id, status: VendorStatus.rejected },
+      {
+        onSuccess: () =>
+          toast.error(`${v.companyName} rejected`, {
+            description: "Vendor access has been revoked.",
+          }),
+        onError: () => toast.error("Failed to reject vendor"),
+      },
+    );
   }
 
   return (
@@ -125,9 +106,39 @@ function AdminVendorsContent() {
       transition={{ duration: 0.3, ease: "easeOut" }}
     >
       <PageHeader
-        title="Vendor Management"
-        subtitle="Review and manage marketplace vendors"
+        title="Vendor Requests"
+        subtitle="Review and manage vendor applications"
       />
+
+      {/* Stats */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
+        {[
+          { label: "Total", value: requests.length },
+          {
+            label: "Pending",
+            value: requests.filter((r) => r.status === VendorStatus.pending)
+              .length,
+          },
+          {
+            label: "Approved",
+            value: requests.filter((r) => r.status === VendorStatus.approved)
+              .length,
+          },
+          {
+            label: "Rejected",
+            value: requests.filter((r) => r.status === VendorStatus.rejected)
+              .length,
+          },
+        ].map((stat) => (
+          <div
+            key={stat.label}
+            className="bg-card border border-border rounded-xl p-4"
+          >
+            <p className="text-2xl font-bold text-foreground">{stat.value}</p>
+            <p className="text-xs text-muted-foreground mt-0.5">{stat.label}</p>
+          </div>
+        ))}
+      </div>
 
       {/* Filter Tabs */}
       <div
@@ -160,10 +171,14 @@ function AdminVendorsContent() {
           <thead>
             <tr className="bg-muted/40 border-b border-border">
               {[
-                "Company Name",
+                "Request ID",
+                "Company",
                 "Brand",
+                "Owner",
                 "Email",
-                "Products",
+                "Categories",
+                "GST",
+                "Submitted",
                 "Status",
                 "Actions",
               ].map((h) => (
@@ -177,47 +192,98 @@ function AdminVendorsContent() {
             </tr>
           </thead>
           <tbody>
-            {filtered.map((v, i) => {
-              const currentStatus = vendorStatuses[v.id];
-              return (
+            {isLoading ? (
+              ["r1", "r2", "r3", "r4", "r5"].map((rk) => (
+                <tr key={rk} className="border-b border-border/50">
+                  {[
+                    "c1",
+                    "c2",
+                    "c3",
+                    "c4",
+                    "c5",
+                    "c6",
+                    "c7",
+                    "c8",
+                    "c9",
+                    "c10",
+                  ].map((ck) => (
+                    <td key={ck} className="px-4 py-3">
+                      <Skeleton className="h-4 w-20" />
+                    </td>
+                  ))}
+                </tr>
+              ))
+            ) : filtered.length === 0 ? (
+              <tr>
+                <td colSpan={10} className="py-12 text-center">
+                  <div
+                    className="flex flex-col items-center gap-3 text-muted-foreground"
+                    data-ocid="vendors.empty_state"
+                  >
+                    <Inbox className="w-10 h-10 opacity-40" />
+                    <p className="text-sm">No vendor requests found.</p>
+                  </div>
+                </td>
+              </tr>
+            ) : (
+              filtered.map((v, i) => (
                 <motion.tr
-                  key={v.id}
+                  key={v.id.toString()}
                   initial={{ opacity: 0, x: -6 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ duration: 0.22, delay: i * 0.04 }}
                   className="border-b border-border/50 hover:bg-primary/5 transition-colors"
                   data-ocid={`vendors.item.${i + 1}`}
                 >
-                  <td className="px-4 py-3 font-medium text-foreground">
-                    {v.company}
+                  <td className="px-4 py-3 font-mono text-xs text-muted-foreground">
+                    #{v.id.toString()}
                   </td>
-                  <td className="px-4 py-3 text-muted-foreground">{v.brand}</td>
+                  <td className="px-4 py-3 font-medium text-foreground">
+                    {v.companyName}
+                  </td>
+                  <td className="px-4 py-3 text-muted-foreground">
+                    {v.brandName}
+                  </td>
+                  <td className="px-4 py-3 text-muted-foreground">
+                    {v.ownerName}
+                  </td>
                   <td className="px-4 py-3 text-muted-foreground">{v.email}</td>
-                  <td className="px-4 py-3 text-foreground font-mono">
-                    {v.products.toLocaleString()}
+                  <td
+                    className="px-4 py-3 text-muted-foreground max-w-[180px] truncate"
+                    title={v.categories.join(", ")}
+                  >
+                    {v.categories.join(", ")}
+                  </td>
+                  <td className="px-4 py-3 text-muted-foreground font-mono text-xs">
+                    {v.gstNumber}
+                  </td>
+                  <td className="px-4 py-3 text-muted-foreground text-xs">
+                    {formatDate(v.submittedAt)}
                   </td>
                   <td className="px-4 py-3">
-                    <StatBadge status={currentStatus} />
+                    <StatBadge status={v.status} />
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
-                      {currentStatus !== VendorStatus.approved && (
+                      {v.status !== VendorStatus.approved && (
                         <Button
                           size="sm"
                           variant="outline"
                           className="h-7 text-xs text-emerald-600 border-emerald-200 hover:bg-emerald-50 hover:border-emerald-400"
                           onClick={() => handleApprove(v)}
+                          disabled={updateStatus.isPending}
                           data-ocid={`vendors.approve_button.${i + 1}`}
                         >
                           Approve
                         </Button>
                       )}
-                      {currentStatus !== VendorStatus.rejected && (
+                      {v.status !== VendorStatus.rejected && (
                         <Button
                           size="sm"
                           variant="outline"
                           className="h-7 text-xs text-red-600 border-red-200 hover:bg-red-50 hover:border-red-400"
                           onClick={() => handleReject(v)}
+                          disabled={updateStatus.isPending}
                           data-ocid={`vendors.reject_button.${i + 1}`}
                         >
                           Reject
@@ -226,18 +292,10 @@ function AdminVendorsContent() {
                     </div>
                   </td>
                 </motion.tr>
-              );
-            })}
+              ))
+            )}
           </tbody>
         </table>
-        {filtered.length === 0 && (
-          <div
-            className="py-12 text-center text-muted-foreground"
-            data-ocid="vendors.empty_state"
-          >
-            No vendors match the selected filter.
-          </div>
-        )}
       </div>
     </motion.div>
   );

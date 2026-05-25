@@ -1,28 +1,26 @@
 {
-  "overview": "MAW (Mobile Accessories Warehouse) is a complete enterprise ecosystem platform with 6 portals: Admin dashboard, Collaboration/vendor registration, Customer e-commerce storefront, Warehouse Manager, Delivery management, and Support ticketing. Each portal has its own professional layout, navigation, KPI dashboards, and sample data.",
+  "overview": "MAW Platform — a full-stack mobile accessories e-commerce marketplace with six portals: customer storefront, admin, manager, delivery, collaboration, and support.",
   "features": [
-    "6 fully-routed portals with working navigation",
-    "Admin dashboard with charts, vendor management, product and analytics pages",
-    "Customer e-commerce storefront with home, products, cart, checkout, orders, wishlist, profile",
-    "Collaboration portal for vendor registration and application status",
-    "Warehouse Manager portal with shipments, inventory, and dispatch",
-    "Delivery portal with delivery list, detail, and OTP confirmation",
-    "Support portal with ticketing system and live chat UI",
-    "Smooth page transitions and animated KPI counters",
-    "Dark sidebar theme for admin/manager/delivery, light theme for customer/collaboration/support",
-    "Role-based access and protected routes via authorization extension"
+    "Amazon-style customer portal with product browsing, cart, checkout, and order tracking",
+    "Dynamic product sorting by company, brand, type, price, and rating",
+    "INR currency throughout the entire platform",
+    "Geolocation address auto-fill on checkout using browser location",
+    "Floating customer support chat bubble and dedicated support page",
+    "Vendor registration with mobile accessories categories and admin approval queue",
+    "Admin product management — add, edit, and delete products",
+    "Admin vendor requests portal with approve/reject workflow",
+    "Internet Identity login gate before adding to cart",
+    "Manager complaints dashboard with resolve actions",
+    "Delivery, collaboration, and support portal stubs"
   ],
-  "category": "enterprise",
+  "category": "e-commerce",
   "tags": [
+    "mobile-accessories",
     "marketplace",
-    "enterprise",
-    "dashboard",
-    "e-commerce",
-    "logistics",
     "multi-portal",
-    "warehouse",
-    "delivery",
-    "support"
+    "e-commerce",
+    "admin-dashboard",
+    "vendor-management"
   ],
-  "last_updated": "2026-05-19T05:20:33.918Z"
+  "last_updated": "2026-05-24T08:04:54.551Z"
 }

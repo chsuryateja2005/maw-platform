@@ -7,6 +7,52 @@ export interface None {
     __kind__: "None";
 }
 export type Option<T> = Some<T> | None;
+export interface Address {
+    tag: string;
+    street: string;
+    country: string;
+    city: string;
+    postalCode: string;
+    isDefault: boolean;
+}
+export interface ProductInput {
+    originalPrice: number;
+    name: string;
+    description: string;
+    discountPercent: bigint;
+    company: string;
+    stock: bigint;
+    imageUrl: string;
+    category: string;
+    brand: string;
+    rating: number;
+    price: number;
+}
+export interface VendorRequest {
+    id: bigint;
+    categories: Array<string>;
+    status: VendorStatus;
+    ownerName: string;
+    bankDetails: string;
+    gstNumber: string;
+    submittedAt: Timestamp;
+    businessAddress: string;
+    email: string;
+    companyName: string;
+    brandName: string;
+    phone: string;
+}
+export interface VendorRequestInput {
+    categories: Array<string>;
+    ownerName: string;
+    bankDetails: string;
+    gstNumber: string;
+    businessAddress: string;
+    email: string;
+    companyName: string;
+    brandName: string;
+    phone: string;
+}
 export type Timestamp = bigint;
 export interface Shipment {
     id: bigint;
@@ -22,9 +68,18 @@ export interface OrderItem {
     quantity: bigint;
     price: number;
 }
+export interface Issue {
+    id: string;
+    status: IssueStatus;
+    subject: string;
+    createdAt: Timestamp;
+    description: string;
+    customerId: string;
+}
 export interface Order {
     id: bigint;
     status: OrderStatus;
+    deliveryAddress: string;
     total: number;
     userId: UserId;
     createdAt: Timestamp;
@@ -43,6 +98,10 @@ export interface Delivery {
     orderId: bigint;
     itemsCount: bigint;
     address: string;
+}
+export interface CartItem {
+    productId: string;
+    quantity: bigint;
 }
 export interface Ticket {
     id: bigint;
@@ -70,11 +129,15 @@ export interface TicketMessage {
 }
 export interface Product {
     id: bigint;
+    originalPrice: number;
     name: string;
     description: string;
+    discountPercent: bigint;
+    company: string;
     stock: bigint;
     imageUrl: string;
     category: string;
+    brand: string;
     rating: number;
     price: number;
 }
@@ -83,6 +146,10 @@ export enum DeliveryStatus {
     in_transit = "in_transit",
     delivered = "delivered",
     failed = "failed"
+}
+export enum IssueStatus {
+    resolved = "resolved",
+    pending = "pending"
 }
 export enum OrderStatus {
     shipped = "shipped",
@@ -98,6 +165,15 @@ export enum ShipmentStatus {
     arriving = "arriving",
     processing = "processing",
     received = "received"
+}
+export enum SortBy {
+    newest = "newest",
+    company = "company",
+    category = "category",
+    brand = "brand",
+    priceDesc = "priceDesc",
+    rating = "rating",
+    priceAsc = "priceAsc"
 }
 export enum TicketPriority {
     low = "low",
@@ -123,21 +199,41 @@ export enum VendorStatus {
 }
 export interface backendInterface {
     assignCallerUserRole(user: Principal, role: UserRole): Promise<void>;
+    createIssue(subject: string, description: string): Promise<Issue>;
+    createOrder(items: Array<OrderItem>, deliveryAddress: string): Promise<Order>;
+    createProduct(input: ProductInput): Promise<Product>;
+    createVendorRequest(input: VendorRequestInput): Promise<VendorRequest>;
+    deleteAddress(index: bigint): Promise<Array<Address>>;
+    deleteProduct(id: bigint): Promise<boolean>;
     getCallerUserRole(): Promise<UserRole>;
     getDeliveries(): Promise<Array<Delivery>>;
+    getIssues(): Promise<Array<Issue>>;
+    getMyIssues(): Promise<Array<Issue>>;
+    getOrderById(id: bigint): Promise<Order | null>;
     getOrders(): Promise<Array<Order>>;
-    getProducts(): Promise<Array<Product>>;
+    getProductById(id: bigint): Promise<Product | null>;
+    getProducts(category: string | null, search: string | null, sortBy: SortBy | null): Promise<Array<Product>>;
     getShipments(): Promise<Array<Shipment>>;
     getTickets(): Promise<Array<Ticket>>;
+    getUserAddresses(): Promise<Array<Address>>;
+    getUserCart(): Promise<Array<CartItem>>;
+    getUserWishlist(): Promise<Array<string>>;
+    getVendorRequests(): Promise<Array<VendorRequest>>;
     getVendors(): Promise<Array<Vendor>>;
     isCallerAdmin(): Promise<boolean>;
     isCallerApproved(): Promise<boolean>;
     listApprovals(): Promise<Array<UserApprovalInfo>>;
     requestApproval(): Promise<void>;
+    saveAddress(addr: Address): Promise<Array<Address>>;
+    saveCartItems(items: Array<CartItem>): Promise<void>;
     setApproval(user: Principal, status: ApprovalStatus): Promise<void>;
+    toggleWishlistItem(productId: string): Promise<Array<string>>;
     updateDeliveryStatus(id: bigint, status: DeliveryStatus): Promise<void>;
+    updateIssueStatus(id: string, status: IssueStatus): Promise<boolean>;
     updateOrderStatus(id: bigint, status: OrderStatus): Promise<void>;
+    updateProduct(id: bigint, input: ProductInput): Promise<Product | null>;
     updateShipmentStatus(id: bigint, status: ShipmentStatus): Promise<void>;
     updateTicketStatus(id: bigint, status: TicketStatus): Promise<void>;
+    updateVendorRequestStatus(id: bigint, status: VendorStatus): Promise<VendorRequest | null>;
     updateVendorStatus(id: bigint, status: VendorStatus): Promise<void>;
 }

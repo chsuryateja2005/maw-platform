@@ -1,3 +1,4 @@
+import { useAuth } from "@/hooks/useAuth";
 import PortalSelector from "@/pages/PortalSelector";
 import { AdminAnalytics } from "@/pages/admin/AdminAnalytics";
 import { AdminPortal } from "@/pages/admin/AdminDashboard";
@@ -10,14 +11,17 @@ import { CollaborationStatus } from "@/pages/collaboration/CollaborationStatus";
 import CustomerCart from "@/pages/customer/CustomerCart";
 import CustomerCheckout from "@/pages/customer/CustomerCheckout";
 import { CustomerPortal } from "@/pages/customer/CustomerHome";
+import CustomerLogin from "@/pages/customer/CustomerLogin";
 import CustomerOrders from "@/pages/customer/CustomerOrders";
 import CustomerProductDetail from "@/pages/customer/CustomerProductDetail";
 import CustomerProducts from "@/pages/customer/CustomerProducts";
 import CustomerProfile from "@/pages/customer/CustomerProfile";
+import CustomerSupport from "@/pages/customer/CustomerSupport";
 import CustomerWishlist from "@/pages/customer/CustomerWishlist";
 import { DeliveryPortal } from "@/pages/delivery/DeliveryDashboard";
 import { DeliveryDetail } from "@/pages/delivery/DeliveryDetail";
 import { DeliveryList } from "@/pages/delivery/DeliveryList";
+import { ManagerComplaints } from "@/pages/manager/ManagerComplaints";
 import { ManagerPortal } from "@/pages/manager/ManagerDashboard";
 import { ManagerDispatchPortal } from "@/pages/manager/ManagerDispatch";
 import { ManagerInventoryPortal } from "@/pages/manager/ManagerInventory";
@@ -33,6 +37,8 @@ import {
   createRootRoute,
   createRoute,
   createRouter,
+  redirect,
+  useRouterState,
 } from "@tanstack/react-router";
 import { AnimatePresence, motion } from "motion/react";
 import { Toaster } from "sonner";
@@ -52,6 +58,29 @@ const rootRoute = createRootRoute({
     </>
   ),
 });
+
+function ProtectedRoute({ children }: { children: React.ReactNode }) {
+  const { isAuthenticated, isLoading } = useAuth();
+  const router = useRouterState();
+  const pathname = router.location.pathname;
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    throw redirect({
+      to: "/user/login",
+      search: { returnTo: pathname },
+    });
+  }
+
+  return <>{children}</>;
+}
 
 function PageTransition({ children }: { children: React.ReactNode }) {
   return (
@@ -203,6 +232,16 @@ const deliveryDetailRoute = createRoute({
   ),
 });
 
+const userLoginRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/user/login",
+  component: () => (
+    <PageTransition>
+      <CustomerLogin />
+    </PageTransition>
+  ),
+});
+
 const userRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/user",
@@ -248,7 +287,9 @@ const userCheckoutRoute = createRoute({
   path: "/user/checkout",
   component: () => (
     <PageTransition>
-      <CustomerCheckout />
+      <ProtectedRoute>
+        <CustomerCheckout />
+      </ProtectedRoute>
     </PageTransition>
   ),
 });
@@ -268,7 +309,9 @@ const userOrdersRoute = createRoute({
   path: "/user/orders",
   component: () => (
     <PageTransition>
-      <CustomerOrders />
+      <ProtectedRoute>
+        <CustomerOrders />
+      </ProtectedRoute>
     </PageTransition>
   ),
 });
@@ -278,7 +321,9 @@ const userProfileRoute = createRoute({
   path: "/user/profile",
   component: () => (
     <PageTransition>
-      <CustomerProfile />
+      <ProtectedRoute>
+        <CustomerProfile />
+      </ProtectedRoute>
     </PageTransition>
   ),
 });
@@ -289,6 +334,16 @@ const userWishlistRoute = createRoute({
   component: () => (
     <PageTransition>
       <CustomerWishlist />
+    </PageTransition>
+  ),
+});
+
+const userSupportRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/user/support",
+  component: () => (
+    <PageTransition>
+      <CustomerSupport />
     </PageTransition>
   ),
 });
@@ -363,6 +418,28 @@ const supportChatRoute = createRoute({
   ),
 });
 
+const customerRedirectRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/customer",
+  component: () => <Navigate to="/user" replace />,
+});
+
+const managerComplaintsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/manager/complaints",
+  component: () => (
+    <PageTransition>
+      <ManagerComplaints />
+    </PageTransition>
+  ),
+});
+
+const catchAllRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "$",
+  component: () => <Navigate to="/user" replace />,
+});
+
 const routeTree = rootRoute.addChildren([
   indexRoute,
   portalsRoute,
@@ -378,6 +455,7 @@ const routeTree = rootRoute.addChildren([
   deliveryRoute,
   deliveryListRoute,
   deliveryDetailRoute,
+  userLoginRoute,
   userRoute,
   userProductsRoute,
   userProductDetailRoute,
@@ -387,6 +465,7 @@ const routeTree = rootRoute.addChildren([
   userOrdersRoute,
   userProfileRoute,
   userWishlistRoute,
+  userSupportRoute,
   collaborationRoute,
   collaborationRegisterRoute,
   collaborationStatusRoute,
@@ -394,9 +473,16 @@ const routeTree = rootRoute.addChildren([
   supportTicketsRoute,
   supportTicketDetailRoute,
   supportChatRoute,
+  customerRedirectRoute,
+  managerComplaintsRoute,
+  catchAllRoute,
 ]);
 
-const router = createRouter({ routeTree });
+const router = createRouter({
+  routeTree,
+  defaultNotFoundComponent: () => <Navigate to="/user" replace />,
+  scrollRestoration: true,
+});
 
 declare module "@tanstack/react-router" {
   interface Register {

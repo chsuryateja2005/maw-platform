@@ -13,21 +13,24 @@ export const UserRole = IDL.Variant({
   'user' : IDL.Null,
   'guest' : IDL.Null,
 });
-export const DeliveryStatus = IDL.Variant({
-  'assigned' : IDL.Null,
-  'in_transit' : IDL.Null,
-  'delivered' : IDL.Null,
-  'failed' : IDL.Null,
+export const IssueStatus = IDL.Variant({
+  'resolved' : IDL.Null,
+  'pending' : IDL.Null,
 });
 export const Timestamp = IDL.Int;
-export const Delivery = IDL.Record({
-  'id' : IDL.Nat,
-  'customerName' : IDL.Text,
-  'status' : DeliveryStatus,
-  'assignedAt' : Timestamp,
-  'orderId' : IDL.Nat,
-  'itemsCount' : IDL.Nat,
-  'address' : IDL.Text,
+export const Issue = IDL.Record({
+  'id' : IDL.Text,
+  'status' : IssueStatus,
+  'subject' : IDL.Text,
+  'createdAt' : Timestamp,
+  'description' : IDL.Text,
+  'customerId' : IDL.Text,
+});
+export const OrderItem = IDL.Record({
+  'name' : IDL.Text,
+  'productId' : IDL.Nat,
+  'quantity' : IDL.Nat,
+  'price' : IDL.Float64,
 });
 export const OrderStatus = IDL.Variant({
   'shipped' : IDL.Null,
@@ -39,29 +42,103 @@ export const OrderStatus = IDL.Variant({
   'returned' : IDL.Null,
 });
 export const UserId = IDL.Principal;
-export const OrderItem = IDL.Record({
-  'name' : IDL.Text,
-  'productId' : IDL.Nat,
-  'quantity' : IDL.Nat,
-  'price' : IDL.Float64,
-});
 export const Order = IDL.Record({
   'id' : IDL.Nat,
   'status' : OrderStatus,
+  'deliveryAddress' : IDL.Text,
   'total' : IDL.Float64,
   'userId' : UserId,
   'createdAt' : Timestamp,
   'items' : IDL.Vec(OrderItem),
 });
-export const Product = IDL.Record({
-  'id' : IDL.Nat,
+export const ProductInput = IDL.Record({
+  'originalPrice' : IDL.Float64,
   'name' : IDL.Text,
   'description' : IDL.Text,
+  'discountPercent' : IDL.Nat,
+  'company' : IDL.Text,
   'stock' : IDL.Nat,
   'imageUrl' : IDL.Text,
   'category' : IDL.Text,
+  'brand' : IDL.Text,
   'rating' : IDL.Float64,
   'price' : IDL.Float64,
+});
+export const Product = IDL.Record({
+  'id' : IDL.Nat,
+  'originalPrice' : IDL.Float64,
+  'name' : IDL.Text,
+  'description' : IDL.Text,
+  'discountPercent' : IDL.Nat,
+  'company' : IDL.Text,
+  'stock' : IDL.Nat,
+  'imageUrl' : IDL.Text,
+  'category' : IDL.Text,
+  'brand' : IDL.Text,
+  'rating' : IDL.Float64,
+  'price' : IDL.Float64,
+});
+export const VendorRequestInput = IDL.Record({
+  'categories' : IDL.Vec(IDL.Text),
+  'ownerName' : IDL.Text,
+  'bankDetails' : IDL.Text,
+  'gstNumber' : IDL.Text,
+  'businessAddress' : IDL.Text,
+  'email' : IDL.Text,
+  'companyName' : IDL.Text,
+  'brandName' : IDL.Text,
+  'phone' : IDL.Text,
+});
+export const VendorStatus = IDL.Variant({
+  'pending' : IDL.Null,
+  'approved' : IDL.Null,
+  'rejected' : IDL.Null,
+});
+export const VendorRequest = IDL.Record({
+  'id' : IDL.Nat,
+  'categories' : IDL.Vec(IDL.Text),
+  'status' : VendorStatus,
+  'ownerName' : IDL.Text,
+  'bankDetails' : IDL.Text,
+  'gstNumber' : IDL.Text,
+  'submittedAt' : Timestamp,
+  'businessAddress' : IDL.Text,
+  'email' : IDL.Text,
+  'companyName' : IDL.Text,
+  'brandName' : IDL.Text,
+  'phone' : IDL.Text,
+});
+export const Address = IDL.Record({
+  'tag' : IDL.Text,
+  'street' : IDL.Text,
+  'country' : IDL.Text,
+  'city' : IDL.Text,
+  'postalCode' : IDL.Text,
+  'isDefault' : IDL.Bool,
+});
+export const DeliveryStatus = IDL.Variant({
+  'assigned' : IDL.Null,
+  'in_transit' : IDL.Null,
+  'delivered' : IDL.Null,
+  'failed' : IDL.Null,
+});
+export const Delivery = IDL.Record({
+  'id' : IDL.Nat,
+  'customerName' : IDL.Text,
+  'status' : DeliveryStatus,
+  'assignedAt' : Timestamp,
+  'orderId' : IDL.Nat,
+  'itemsCount' : IDL.Nat,
+  'address' : IDL.Text,
+});
+export const SortBy = IDL.Variant({
+  'newest' : IDL.Null,
+  'company' : IDL.Null,
+  'category' : IDL.Null,
+  'brand' : IDL.Null,
+  'priceDesc' : IDL.Null,
+  'rating' : IDL.Null,
+  'priceAsc' : IDL.Null,
 });
 export const ShipmentStatus = IDL.Variant({
   'dispatched' : IDL.Null,
@@ -104,10 +181,9 @@ export const Ticket = IDL.Record({
   'customerId' : UserId,
   'priority' : TicketPriority,
 });
-export const VendorStatus = IDL.Variant({
-  'pending' : IDL.Null,
-  'approved' : IDL.Null,
-  'rejected' : IDL.Null,
+export const CartItem = IDL.Record({
+  'productId' : IDL.Text,
+  'quantity' : IDL.Nat,
 });
 export const Vendor = IDL.Record({
   'id' : IDL.Nat,
@@ -131,22 +207,50 @@ export const UserApprovalInfo = IDL.Record({
 export const idlService = IDL.Service({
   '_initializeAccessControl' : IDL.Func([], [], []),
   'assignCallerUserRole' : IDL.Func([IDL.Principal, UserRole], [], []),
+  'createIssue' : IDL.Func([IDL.Text, IDL.Text], [Issue], []),
+  'createOrder' : IDL.Func([IDL.Vec(OrderItem), IDL.Text], [Order], []),
+  'createProduct' : IDL.Func([ProductInput], [Product], []),
+  'createVendorRequest' : IDL.Func([VendorRequestInput], [VendorRequest], []),
+  'deleteAddress' : IDL.Func([IDL.Nat], [IDL.Vec(Address)], []),
+  'deleteProduct' : IDL.Func([IDL.Nat], [IDL.Bool], []),
   'getCallerUserRole' : IDL.Func([], [UserRole], ['query']),
   'getDeliveries' : IDL.Func([], [IDL.Vec(Delivery)], ['query']),
+  'getIssues' : IDL.Func([], [IDL.Vec(Issue)], ['query']),
+  'getMyIssues' : IDL.Func([], [IDL.Vec(Issue)], ['query']),
+  'getOrderById' : IDL.Func([IDL.Nat], [IDL.Opt(Order)], ['query']),
   'getOrders' : IDL.Func([], [IDL.Vec(Order)], ['query']),
-  'getProducts' : IDL.Func([], [IDL.Vec(Product)], ['query']),
+  'getProductById' : IDL.Func([IDL.Nat], [IDL.Opt(Product)], ['query']),
+  'getProducts' : IDL.Func(
+      [IDL.Opt(IDL.Text), IDL.Opt(IDL.Text), IDL.Opt(SortBy)],
+      [IDL.Vec(Product)],
+      ['query'],
+    ),
   'getShipments' : IDL.Func([], [IDL.Vec(Shipment)], ['query']),
   'getTickets' : IDL.Func([], [IDL.Vec(Ticket)], ['query']),
+  'getUserAddresses' : IDL.Func([], [IDL.Vec(Address)], ['query']),
+  'getUserCart' : IDL.Func([], [IDL.Vec(CartItem)], []),
+  'getUserWishlist' : IDL.Func([], [IDL.Vec(IDL.Text)], ['query']),
+  'getVendorRequests' : IDL.Func([], [IDL.Vec(VendorRequest)], ['query']),
   'getVendors' : IDL.Func([], [IDL.Vec(Vendor)], ['query']),
   'isCallerAdmin' : IDL.Func([], [IDL.Bool], ['query']),
   'isCallerApproved' : IDL.Func([], [IDL.Bool], ['query']),
   'listApprovals' : IDL.Func([], [IDL.Vec(UserApprovalInfo)], ['query']),
   'requestApproval' : IDL.Func([], [], []),
+  'saveAddress' : IDL.Func([Address], [IDL.Vec(Address)], []),
+  'saveCartItems' : IDL.Func([IDL.Vec(CartItem)], [], []),
   'setApproval' : IDL.Func([IDL.Principal, ApprovalStatus], [], []),
+  'toggleWishlistItem' : IDL.Func([IDL.Text], [IDL.Vec(IDL.Text)], []),
   'updateDeliveryStatus' : IDL.Func([IDL.Nat, DeliveryStatus], [], []),
+  'updateIssueStatus' : IDL.Func([IDL.Text, IssueStatus], [IDL.Bool], []),
   'updateOrderStatus' : IDL.Func([IDL.Nat, OrderStatus], [], []),
+  'updateProduct' : IDL.Func([IDL.Nat, ProductInput], [IDL.Opt(Product)], []),
   'updateShipmentStatus' : IDL.Func([IDL.Nat, ShipmentStatus], [], []),
   'updateTicketStatus' : IDL.Func([IDL.Nat, TicketStatus], [], []),
+  'updateVendorRequestStatus' : IDL.Func(
+      [IDL.Nat, VendorStatus],
+      [IDL.Opt(VendorRequest)],
+      [],
+    ),
   'updateVendorStatus' : IDL.Func([IDL.Nat, VendorStatus], [], []),
 });
 
@@ -158,21 +262,24 @@ export const idlFactory = ({ IDL }) => {
     'user' : IDL.Null,
     'guest' : IDL.Null,
   });
-  const DeliveryStatus = IDL.Variant({
-    'assigned' : IDL.Null,
-    'in_transit' : IDL.Null,
-    'delivered' : IDL.Null,
-    'failed' : IDL.Null,
+  const IssueStatus = IDL.Variant({
+    'resolved' : IDL.Null,
+    'pending' : IDL.Null,
   });
   const Timestamp = IDL.Int;
-  const Delivery = IDL.Record({
-    'id' : IDL.Nat,
-    'customerName' : IDL.Text,
-    'status' : DeliveryStatus,
-    'assignedAt' : Timestamp,
-    'orderId' : IDL.Nat,
-    'itemsCount' : IDL.Nat,
-    'address' : IDL.Text,
+  const Issue = IDL.Record({
+    'id' : IDL.Text,
+    'status' : IssueStatus,
+    'subject' : IDL.Text,
+    'createdAt' : Timestamp,
+    'description' : IDL.Text,
+    'customerId' : IDL.Text,
+  });
+  const OrderItem = IDL.Record({
+    'name' : IDL.Text,
+    'productId' : IDL.Nat,
+    'quantity' : IDL.Nat,
+    'price' : IDL.Float64,
   });
   const OrderStatus = IDL.Variant({
     'shipped' : IDL.Null,
@@ -184,29 +291,103 @@ export const idlFactory = ({ IDL }) => {
     'returned' : IDL.Null,
   });
   const UserId = IDL.Principal;
-  const OrderItem = IDL.Record({
-    'name' : IDL.Text,
-    'productId' : IDL.Nat,
-    'quantity' : IDL.Nat,
-    'price' : IDL.Float64,
-  });
   const Order = IDL.Record({
     'id' : IDL.Nat,
     'status' : OrderStatus,
+    'deliveryAddress' : IDL.Text,
     'total' : IDL.Float64,
     'userId' : UserId,
     'createdAt' : Timestamp,
     'items' : IDL.Vec(OrderItem),
   });
-  const Product = IDL.Record({
-    'id' : IDL.Nat,
+  const ProductInput = IDL.Record({
+    'originalPrice' : IDL.Float64,
     'name' : IDL.Text,
     'description' : IDL.Text,
+    'discountPercent' : IDL.Nat,
+    'company' : IDL.Text,
     'stock' : IDL.Nat,
     'imageUrl' : IDL.Text,
     'category' : IDL.Text,
+    'brand' : IDL.Text,
     'rating' : IDL.Float64,
     'price' : IDL.Float64,
+  });
+  const Product = IDL.Record({
+    'id' : IDL.Nat,
+    'originalPrice' : IDL.Float64,
+    'name' : IDL.Text,
+    'description' : IDL.Text,
+    'discountPercent' : IDL.Nat,
+    'company' : IDL.Text,
+    'stock' : IDL.Nat,
+    'imageUrl' : IDL.Text,
+    'category' : IDL.Text,
+    'brand' : IDL.Text,
+    'rating' : IDL.Float64,
+    'price' : IDL.Float64,
+  });
+  const VendorRequestInput = IDL.Record({
+    'categories' : IDL.Vec(IDL.Text),
+    'ownerName' : IDL.Text,
+    'bankDetails' : IDL.Text,
+    'gstNumber' : IDL.Text,
+    'businessAddress' : IDL.Text,
+    'email' : IDL.Text,
+    'companyName' : IDL.Text,
+    'brandName' : IDL.Text,
+    'phone' : IDL.Text,
+  });
+  const VendorStatus = IDL.Variant({
+    'pending' : IDL.Null,
+    'approved' : IDL.Null,
+    'rejected' : IDL.Null,
+  });
+  const VendorRequest = IDL.Record({
+    'id' : IDL.Nat,
+    'categories' : IDL.Vec(IDL.Text),
+    'status' : VendorStatus,
+    'ownerName' : IDL.Text,
+    'bankDetails' : IDL.Text,
+    'gstNumber' : IDL.Text,
+    'submittedAt' : Timestamp,
+    'businessAddress' : IDL.Text,
+    'email' : IDL.Text,
+    'companyName' : IDL.Text,
+    'brandName' : IDL.Text,
+    'phone' : IDL.Text,
+  });
+  const Address = IDL.Record({
+    'tag' : IDL.Text,
+    'street' : IDL.Text,
+    'country' : IDL.Text,
+    'city' : IDL.Text,
+    'postalCode' : IDL.Text,
+    'isDefault' : IDL.Bool,
+  });
+  const DeliveryStatus = IDL.Variant({
+    'assigned' : IDL.Null,
+    'in_transit' : IDL.Null,
+    'delivered' : IDL.Null,
+    'failed' : IDL.Null,
+  });
+  const Delivery = IDL.Record({
+    'id' : IDL.Nat,
+    'customerName' : IDL.Text,
+    'status' : DeliveryStatus,
+    'assignedAt' : Timestamp,
+    'orderId' : IDL.Nat,
+    'itemsCount' : IDL.Nat,
+    'address' : IDL.Text,
+  });
+  const SortBy = IDL.Variant({
+    'newest' : IDL.Null,
+    'company' : IDL.Null,
+    'category' : IDL.Null,
+    'brand' : IDL.Null,
+    'priceDesc' : IDL.Null,
+    'rating' : IDL.Null,
+    'priceAsc' : IDL.Null,
   });
   const ShipmentStatus = IDL.Variant({
     'dispatched' : IDL.Null,
@@ -249,11 +430,7 @@ export const idlFactory = ({ IDL }) => {
     'customerId' : UserId,
     'priority' : TicketPriority,
   });
-  const VendorStatus = IDL.Variant({
-    'pending' : IDL.Null,
-    'approved' : IDL.Null,
-    'rejected' : IDL.Null,
-  });
+  const CartItem = IDL.Record({ 'productId' : IDL.Text, 'quantity' : IDL.Nat });
   const Vendor = IDL.Record({
     'id' : IDL.Nat,
     'productsCount' : IDL.Nat,
@@ -276,22 +453,50 @@ export const idlFactory = ({ IDL }) => {
   return IDL.Service({
     '_initializeAccessControl' : IDL.Func([], [], []),
     'assignCallerUserRole' : IDL.Func([IDL.Principal, UserRole], [], []),
+    'createIssue' : IDL.Func([IDL.Text, IDL.Text], [Issue], []),
+    'createOrder' : IDL.Func([IDL.Vec(OrderItem), IDL.Text], [Order], []),
+    'createProduct' : IDL.Func([ProductInput], [Product], []),
+    'createVendorRequest' : IDL.Func([VendorRequestInput], [VendorRequest], []),
+    'deleteAddress' : IDL.Func([IDL.Nat], [IDL.Vec(Address)], []),
+    'deleteProduct' : IDL.Func([IDL.Nat], [IDL.Bool], []),
     'getCallerUserRole' : IDL.Func([], [UserRole], ['query']),
     'getDeliveries' : IDL.Func([], [IDL.Vec(Delivery)], ['query']),
+    'getIssues' : IDL.Func([], [IDL.Vec(Issue)], ['query']),
+    'getMyIssues' : IDL.Func([], [IDL.Vec(Issue)], ['query']),
+    'getOrderById' : IDL.Func([IDL.Nat], [IDL.Opt(Order)], ['query']),
     'getOrders' : IDL.Func([], [IDL.Vec(Order)], ['query']),
-    'getProducts' : IDL.Func([], [IDL.Vec(Product)], ['query']),
+    'getProductById' : IDL.Func([IDL.Nat], [IDL.Opt(Product)], ['query']),
+    'getProducts' : IDL.Func(
+        [IDL.Opt(IDL.Text), IDL.Opt(IDL.Text), IDL.Opt(SortBy)],
+        [IDL.Vec(Product)],
+        ['query'],
+      ),
     'getShipments' : IDL.Func([], [IDL.Vec(Shipment)], ['query']),
     'getTickets' : IDL.Func([], [IDL.Vec(Ticket)], ['query']),
+    'getUserAddresses' : IDL.Func([], [IDL.Vec(Address)], ['query']),
+    'getUserCart' : IDL.Func([], [IDL.Vec(CartItem)], []),
+    'getUserWishlist' : IDL.Func([], [IDL.Vec(IDL.Text)], ['query']),
+    'getVendorRequests' : IDL.Func([], [IDL.Vec(VendorRequest)], ['query']),
     'getVendors' : IDL.Func([], [IDL.Vec(Vendor)], ['query']),
     'isCallerAdmin' : IDL.Func([], [IDL.Bool], ['query']),
     'isCallerApproved' : IDL.Func([], [IDL.Bool], ['query']),
     'listApprovals' : IDL.Func([], [IDL.Vec(UserApprovalInfo)], ['query']),
     'requestApproval' : IDL.Func([], [], []),
+    'saveAddress' : IDL.Func([Address], [IDL.Vec(Address)], []),
+    'saveCartItems' : IDL.Func([IDL.Vec(CartItem)], [], []),
     'setApproval' : IDL.Func([IDL.Principal, ApprovalStatus], [], []),
+    'toggleWishlistItem' : IDL.Func([IDL.Text], [IDL.Vec(IDL.Text)], []),
     'updateDeliveryStatus' : IDL.Func([IDL.Nat, DeliveryStatus], [], []),
+    'updateIssueStatus' : IDL.Func([IDL.Text, IssueStatus], [IDL.Bool], []),
     'updateOrderStatus' : IDL.Func([IDL.Nat, OrderStatus], [], []),
+    'updateProduct' : IDL.Func([IDL.Nat, ProductInput], [IDL.Opt(Product)], []),
     'updateShipmentStatus' : IDL.Func([IDL.Nat, ShipmentStatus], [], []),
     'updateTicketStatus' : IDL.Func([IDL.Nat, TicketStatus], [], []),
+    'updateVendorRequestStatus' : IDL.Func(
+        [IDL.Nat, VendorStatus],
+        [IDL.Opt(VendorRequest)],
+        [],
+      ),
     'updateVendorStatus' : IDL.Func([IDL.Nat, VendorStatus], [], []),
   });
 };

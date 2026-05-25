@@ -4,6 +4,33 @@ type VendorStatus =
    pending;
    rejected;
  };
+type VendorRequestInput = 
+ record {
+   bankDetails: text;
+   brandName: text;
+   businessAddress: text;
+   categories: vec text;
+   companyName: text;
+   email: text;
+   gstNumber: text;
+   ownerName: text;
+   phone: text;
+ };
+type VendorRequest = 
+ record {
+   bankDetails: text;
+   brandName: text;
+   businessAddress: text;
+   categories: vec text;
+   companyName: text;
+   email: text;
+   gstNumber: text;
+   id: nat;
+   ownerName: text;
+   phone: text;
+   status: VendorStatus;
+   submittedAt: Timestamp;
+ };
 type Vendor = 
  record {
    brandName: text;
@@ -58,6 +85,16 @@ type Ticket =
    status: TicketStatus;
    subject: text;
  };
+type SortBy = 
+ variant {
+   brand;
+   category;
+   company;
+   newest;
+   priceAsc;
+   priceDesc;
+   rating;
+ };
 type ShipmentStatus = 
  variant {
    arriving;
@@ -74,13 +111,31 @@ type Shipment =
    receivedAt: opt Timestamp;
    status: ShipmentStatus;
  };
+type ProductInput = 
+ record {
+   brand: text;
+   category: text;
+   company: text;
+   description: text;
+   discountPercent: nat;
+   imageUrl: text;
+   name: text;
+   originalPrice: float64;
+   price: float64;
+   rating: float64;
+   stock: nat;
+ };
 type Product = 
  record {
+   brand: text;
    category: text;
+   company: text;
    description: text;
+   discountPercent: nat;
    id: nat;
    imageUrl: text;
    name: text;
+   originalPrice: float64;
    price: float64;
    rating: float64;
    stock: nat;
@@ -105,11 +160,26 @@ type OrderItem =
 type Order = 
  record {
    createdAt: Timestamp;
+   deliveryAddress: text;
    id: nat;
    items: vec OrderItem;
    status: OrderStatus;
    total: float64;
    userId: UserId;
+ };
+type IssueStatus = 
+ variant {
+   pending;
+   resolved;
+ };
+type Issue = 
+ record {
+   createdAt: Timestamp;
+   customerId: text;
+   description: text;
+   id: text;
+   status: IssueStatus;
+   subject: text;
  };
 type DeliveryStatus = 
  variant {
@@ -128,30 +198,66 @@ type Delivery =
    orderId: nat;
    status: DeliveryStatus;
  };
+type CartItem = 
+ record {
+   productId: text;
+   quantity: nat;
+ };
 type ApprovalStatus = 
  variant {
    approved;
    pending;
    rejected;
  };
+type Address = 
+ record {
+   city: text;
+   country: text;
+   isDefault: bool;
+   postalCode: text;
+   street: text;
+   tag: text;
+ };
 service : {
   _initializeAccessControl: () -> ();
   assignCallerUserRole: (user: principal, role: UserRole) -> ();
+  createIssue: (subject: text, description: text) -> (Issue);
+  createOrder: (items: vec OrderItem, deliveryAddress: text) -> (Order);
+  createProduct: (input: ProductInput) -> (Product);
+  createVendorRequest: (input: VendorRequestInput) -> (VendorRequest);
+  deleteAddress: (index: nat) -> (vec Address);
+  deleteProduct: (id: nat) -> (bool);
   getCallerUserRole: () -> (UserRole) query;
   getDeliveries: () -> (vec Delivery) query;
+  getIssues: () -> (vec Issue) query;
+  getMyIssues: () -> (vec Issue) query;
+  getOrderById: (id: nat) -> (opt Order) query;
   getOrders: () -> (vec Order) query;
-  getProducts: () -> (vec Product) query;
+  getProductById: (id: nat) -> (opt Product) query;
+  getProducts: (category: opt text, search: opt text, sortBy: opt SortBy) ->
+   (vec Product) query;
   getShipments: () -> (vec Shipment) query;
   getTickets: () -> (vec Ticket) query;
+  getUserAddresses: () -> (vec Address) query;
+  getUserCart: () -> (vec CartItem);
+  getUserWishlist: () -> (vec text) query;
+  getVendorRequests: () -> (vec VendorRequest) query;
   getVendors: () -> (vec Vendor) query;
   isCallerAdmin: () -> (bool) query;
   isCallerApproved: () -> (bool) query;
   listApprovals: () -> (vec UserApprovalInfo) query;
   requestApproval: () -> ();
+  saveAddress: (addr: Address) -> (vec Address);
+  saveCartItems: (items: vec CartItem) -> ();
   setApproval: (user: principal, status: ApprovalStatus) -> ();
+  toggleWishlistItem: (productId: text) -> (vec text);
   updateDeliveryStatus: (id: nat, status: DeliveryStatus) -> ();
+  updateIssueStatus: (id: text, status: IssueStatus) -> (bool);
   updateOrderStatus: (id: nat, status: OrderStatus) -> ();
+  updateProduct: (id: nat, input: ProductInput) -> (opt Product);
   updateShipmentStatus: (id: nat, status: ShipmentStatus) -> ();
   updateTicketStatus: (id: nat, status: TicketStatus) -> ();
+  updateVendorRequestStatus: (id: nat, status: VendorStatus) ->
+   (opt VendorRequest);
   updateVendorStatus: (id: nat, status: VendorStatus) -> ();
 }

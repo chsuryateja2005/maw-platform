@@ -1,14 +1,18 @@
-import Debug "mo:core/Debug";
 import TicketTypes "../types/tickets";
+import List "mo:core/List";
+import Time "mo:core/Time";
 
 module {
   public func sampleTickets() : [TicketTypes.Ticket] {
-    ignore ();
-    Debug.todo();
+    // Start with empty tickets — support staff create them via their portal
+    []
   };
 
-  public func updateTicketStatus(tickets : [TicketTypes.Ticket], id : Nat, status : TicketTypes.TicketStatus) : [TicketTypes.Ticket] {
-    ignore (tickets, id, status);
-    Debug.todo();
+  public func updateTicketStatus(tickets : List.List<TicketTypes.Ticket>, id : Nat, status : TicketTypes.TicketStatus) {
+    tickets.mapInPlace(
+      func(t) {
+        if (t.id == id) { { t with status } } else { t };
+      }
+    );
   };
 };

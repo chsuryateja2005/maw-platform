@@ -1,4 +1,3 @@
-import Debug "mo:core/Debug";
 import Types "common";
 
 module {
@@ -16,5 +15,32 @@ module {
     status : VendorStatus;
     productsCount : Nat;
     createdAt : Types.Timestamp;
+  };
+
+  public type VendorRequest = {
+    id : Nat;
+    companyName : Text;
+    brandName : Text;
+    ownerName : Text;
+    email : Text;
+    phone : Text;
+    gstNumber : Text;
+    businessAddress : Text;
+    categories : [Text];
+    bankDetails : Text;
+    status : VendorStatus;
+    submittedAt : Types.Timestamp;
+  };
+
+  public type VendorRequestInput = {
+    companyName : Text;
+    brandName : Text;
+    ownerName : Text;
+    email : Text;
+    phone : Text;
+    gstNumber : Text;
+    businessAddress : Text;
+    categories : [Text];
+    bankDetails : Text;
   };
 };

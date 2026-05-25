@@ -1,16 +1,18 @@
+import { createActor } from "@/backend";
 import { LightSidebarLayout } from "@/layouts/LightSidebarLayout";
+import { useActor } from "@caffeineai/core-infrastructure";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import {
   AlertCircle,
   Building2,
+  CheckCircle,
   ClipboardList,
-  FileText,
   Home,
   PackageCheck,
-  Upload,
 } from "lucide-react";
 import { motion } from "motion/react";
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 
@@ -24,30 +26,31 @@ const NAV_ITEMS = [
   },
 ];
 
-const PRODUCT_CATEGORIES = [
-  "Electronics & Gadgets",
-  "Fashion & Apparel",
-  "Home & Living",
-  "Health & Beauty",
-  "Sports & Outdoors",
-  "Food & Beverages",
-  "Toys & Games",
-  "Books & Media",
-  "Automotive",
-  "Industrial Supplies",
-  "Pet Care",
-  "Other",
+const MOBILE_CATEGORIES = [
+  "Phone Cases & Covers",
+  "Screen Protectors",
+  "Chargers & Cables",
+  "Power Banks",
+  "Earphones & Headphones",
+  "Bluetooth Speakers",
+  "Phone Holders & Stands",
+  "Camera Lenses & Accessories",
+  "Smartwatch Accessories",
+  "Tablet Accessories",
+  "Other Mobile Accessories",
 ];
 
 interface FormFields {
   companyName: string;
-  businessEmail: string;
   brandName: string;
-  productName: string;
-  productCategory: string;
-  productSummary: string;
-  quantity: number;
-  unitPrice: number;
+  ownerName: string;
+  email: string;
+  phone: string;
+  gstNumber: string;
+  businessAddress: string;
+  bankAccountNumber: string;
+  bankIfscCode: string;
+  categories: string[];
 }
 
 function FieldError({ message }: { message?: string }) {
@@ -65,39 +68,114 @@ function FieldError({ message }: { message?: string }) {
 
 export function CollaborationRegister() {
   const navigate = useNavigate();
-  const [logoFile, setLogoFile] = useState<File | null>(null);
-  const [certFile, setCertFile] = useState<File | null>(null);
-  const [logoOver, setLogoOver] = useState(false);
-  const [certOver, setCertOver] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
-  const logoRef = useRef<HTMLInputElement>(null);
-  const certRef = useRef<HTMLInputElement>(null);
+  const [submitted, setSubmitted] = useState(false);
+  const { actor } = useActor(createActor);
+  const queryClient = useQueryClient();
 
   const {
     register,
     handleSubmit,
     formState: { errors },
-  } = useForm<FormFields>();
+    setValue,
+    watch,
+  } = useForm<FormFields>({
+    defaultValues: { categories: [] },
+  });
 
-  function handleFileDrop(
-    e: React.DragEvent,
-    setter: (f: File | null) => void,
-    setOver: (v: boolean) => void,
-  ) {
-    e.preventDefault();
-    setOver(false);
-    const file = e.dataTransfer.files[0];
-    if (file) setter(file);
+  const selectedCategories = watch("categories") || [];
+
+  const createMutation = useMutation({
+    mutationFn: async (data: FormFields) => {
+      if (!actor) throw new Error("Backend not available");
+      const bankDetails = `Account: ${data.bankAccountNumber}, IFSC: ${data.bankIfscCode}`;
+      return actor.createVendorRequest({
+        companyName: data.companyName,
+        brandName: data.brandName,
+        ownerName: data.ownerName,
+        email: data.email,
+        phone: data.phone,
+        gstNumber: data.gstNumber,
+        businessAddress: data.businessAddress,
+        categories: data.categories,
+        bankDetails,
+      });
+    },
+    onSuccess: () => {
+      setSubmitted(true);
+      toast.success("Application submitted successfully!");
+      queryClient.invalidateQueries({ queryKey: ["vendorRequests"] });
+    },
+    onError: (err) => {
+      toast.error("Submission failed", {
+        description: err instanceof Error ? err.message : "Please try again",
+      });
+    },
+  });
+
+  function toggleCategory(cat: string) {
+    const current = selectedCategories;
+    if (current.includes(cat)) {
+      setValue(
+        "categories",
+        current.filter((c) => c !== cat),
+      );
+    } else {
+      setValue("categories", [...current, cat]);
+    }
   }
 
-  async function onSubmit() {
-    setSubmitting(true);
-    await new Promise((r) => setTimeout(r, 1400));
-    setSubmitting(false);
-    toast.success("Application submitted!", {
-      description: "We'll review your application within 3-5 business days.",
-    });
-    navigate({ to: "/collaboration/status" });
+  async function onSubmit(data: FormFields) {
+    createMutation.mutate(data);
+  }
+
+  if (submitted) {
+    return (
+      <LightSidebarLayout
+        portalName="Vendor Portal"
+        portalLogo={Building2}
+        navItems={NAV_ITEMS}
+        userLabel="Guest User"
+        userSubLabel="Prospective Vendor"
+      >
+        <div className="max-w-2xl mx-auto">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.4 }}
+            className="bg-card border border-border rounded-2xl p-8 text-center"
+          >
+            <div className="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-4">
+              <CheckCircle className="w-8 h-8" />
+            </div>
+            <h2 className="text-xl font-bold font-display text-foreground mb-2">
+              Application Submitted
+            </h2>
+            <p className="text-sm text-muted-foreground mb-6">
+              Your vendor application has been submitted and is pending
+              approval. Our team will review it within 3-5 business days.
+            </p>
+            <div className="flex gap-3 justify-center">
+              <button
+                type="button"
+                onClick={() => navigate({ to: "/collaboration/status" })}
+                className="px-5 py-2.5 bg-primary text-primary-foreground rounded-lg text-sm font-semibold hover:bg-primary/90 transition-colors"
+                data-ocid="collab.success.view_status_button"
+              >
+                View Application Status
+              </button>
+              <button
+                type="button"
+                onClick={() => setSubmitted(false)}
+                className="px-5 py-2.5 border border-border bg-card text-foreground rounded-lg text-sm font-medium hover:bg-muted transition-colors"
+                data-ocid="collab.success.submit_another_button"
+              >
+                Submit Another
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      </LightSidebarLayout>
+    );
   }
 
   return (
@@ -117,17 +195,17 @@ export function CollaborationRegister() {
           {/* Header */}
           <div className="mb-7">
             <h1 className="text-2xl font-bold font-display text-foreground tracking-tight">
-              Company Registration
+              Vendor Registration
             </h1>
             <p className="text-sm text-muted-foreground mt-1">
-              Complete all fields to submit your vendor application. Our team
-              will review within 3-5 business days.
+              Complete all fields to submit your vendor application for mobile
+              accessories. Our team will review within 3-5 business days.
             </p>
           </div>
 
           <form onSubmit={handleSubmit(onSubmit)} noValidate>
             {/* Section 1: Company Info */}
-            <div className="bg-white border border-border rounded-xl overflow-hidden mb-5">
+            <div className="bg-card border border-border rounded-xl overflow-hidden mb-5">
               <div className="px-6 py-4 bg-muted/40 border-b border-border">
                 <h2 className="text-sm font-semibold text-foreground">
                   Company Information
@@ -149,34 +227,11 @@ export function CollaborationRegister() {
                     {...register("companyName", {
                       required: "Company name is required",
                     })}
-                    placeholder="Acme Global Ltd."
+                    placeholder="Acme Mobile Accessories Ltd."
                     data-ocid="collab.form.company_name.input"
                     className="w-full px-3.5 py-2.5 rounded-lg border border-input bg-background text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring/50 transition-shadow"
                   />
                   <FieldError message={errors.companyName?.message} />
-                </div>
-                <div>
-                  <label
-                    className="block text-xs font-semibold text-foreground mb-1.5"
-                    htmlFor="businessEmail"
-                  >
-                    Business Email <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    id="businessEmail"
-                    type="email"
-                    {...register("businessEmail", {
-                      required: "Business email is required",
-                      pattern: {
-                        value: /^[^@]+@[^@]+\.[^@]+$/,
-                        message: "Enter a valid email",
-                      },
-                    })}
-                    placeholder="contact@yourcompany.com"
-                    data-ocid="collab.form.business_email.input"
-                    className="w-full px-3.5 py-2.5 rounded-lg border border-input bg-background text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring/50 transition-shadow"
-                  />
-                  <FieldError message={errors.businessEmail?.message} />
                 </div>
                 <div>
                   <label
@@ -196,276 +251,218 @@ export function CollaborationRegister() {
                   />
                   <FieldError message={errors.brandName?.message} />
                 </div>
-              </div>
-            </div>
-
-            {/* Section 2: Product Info */}
-            <div className="bg-white border border-border rounded-xl overflow-hidden mb-5">
-              <div className="px-6 py-4 bg-muted/40 border-b border-border">
-                <h2 className="text-sm font-semibold text-foreground">
-                  Product Information
-                </h2>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  Details about the products you want to list
-                </p>
-              </div>
-              <div className="px-6 py-5 space-y-5">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                  <div>
-                    <label
-                      className="block text-xs font-semibold text-foreground mb-1.5"
-                      htmlFor="productName"
-                    >
-                      Product Name <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      id="productName"
-                      {...register("productName", {
-                        required: "Product name is required",
-                      })}
-                      placeholder="AcmePro Wireless Earbuds X5"
-                      data-ocid="collab.form.product_name.input"
-                      className="w-full px-3.5 py-2.5 rounded-lg border border-input bg-background text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring/50 transition-shadow"
-                    />
-                    <FieldError message={errors.productName?.message} />
-                  </div>
-                  <div>
-                    <label
-                      className="block text-xs font-semibold text-foreground mb-1.5"
-                      htmlFor="productCategory"
-                    >
-                      Product Category <span className="text-red-500">*</span>
-                    </label>
-                    <select
-                      id="productCategory"
-                      {...register("productCategory", {
-                        required: "Select a product category",
-                      })}
-                      data-ocid="collab.form.product_category.select"
-                      className="w-full px-3.5 py-2.5 rounded-lg border border-input bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring/50 transition-shadow appearance-none"
-                    >
-                      <option value="">Select a category…</option>
-                      {PRODUCT_CATEGORIES.map((cat) => (
-                        <option key={cat} value={cat}>
-                          {cat}
-                        </option>
-                      ))}
-                    </select>
-                    <FieldError message={errors.productCategory?.message} />
-                  </div>
+                <div>
+                  <label
+                    className="block text-xs font-semibold text-foreground mb-1.5"
+                    htmlFor="ownerName"
+                  >
+                    Owner Name <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    id="ownerName"
+                    {...register("ownerName", {
+                      required: "Owner name is required",
+                    })}
+                    placeholder="John Doe"
+                    data-ocid="collab.form.owner_name.input"
+                    className="w-full px-3.5 py-2.5 rounded-lg border border-input bg-background text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring/50 transition-shadow"
+                  />
+                  <FieldError message={errors.ownerName?.message} />
                 </div>
                 <div>
                   <label
                     className="block text-xs font-semibold text-foreground mb-1.5"
-                    htmlFor="productSummary"
+                    htmlFor="email"
                   >
-                    Product Summary <span className="text-red-500">*</span>
+                    Business Email <span className="text-red-500">*</span>
                   </label>
-                  <textarea
-                    id="productSummary"
-                    rows={4}
-                    {...register("productSummary", {
-                      required: "Product summary is required",
-                      minLength: {
-                        value: 30,
-                        message: "Please provide at least 30 characters",
+                  <input
+                    id="email"
+                    type="email"
+                    {...register("email", {
+                      required: "Business email is required",
+                      pattern: {
+                        value: /^[^@]+@[^@]+\.[^@]+$/,
+                        message: "Enter a valid email",
                       },
                     })}
-                    placeholder="Describe your product — key features, materials, target audience, and what makes it unique in the market..."
-                    data-ocid="collab.form.product_summary.textarea"
+                    placeholder="contact@yourcompany.com"
+                    data-ocid="collab.form.email.input"
+                    className="w-full px-3.5 py-2.5 rounded-lg border border-input bg-background text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring/50 transition-shadow"
+                  />
+                  <FieldError message={errors.email?.message} />
+                </div>
+                <div>
+                  <label
+                    className="block text-xs font-semibold text-foreground mb-1.5"
+                    htmlFor="phone"
+                  >
+                    Phone Number <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    id="phone"
+                    type="tel"
+                    {...register("phone", {
+                      required: "Phone number is required",
+                      pattern: {
+                        value: /^[0-9+\-\s()]{10,15}$/,
+                        message: "Enter a valid phone number",
+                      },
+                    })}
+                    placeholder="+91 98765 43210"
+                    data-ocid="collab.form.phone.input"
+                    className="w-full px-3.5 py-2.5 rounded-lg border border-input bg-background text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring/50 transition-shadow"
+                  />
+                  <FieldError message={errors.phone?.message} />
+                </div>
+                <div>
+                  <label
+                    className="block text-xs font-semibold text-foreground mb-1.5"
+                    htmlFor="gstNumber"
+                  >
+                    GST Number <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    id="gstNumber"
+                    {...register("gstNumber", {
+                      required: "GST number is required",
+                    })}
+                    placeholder="22AAAAA0000A1Z5"
+                    data-ocid="collab.form.gst_number.input"
+                    className="w-full px-3.5 py-2.5 rounded-lg border border-input bg-background text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring/50 transition-shadow"
+                  />
+                  <FieldError message={errors.gstNumber?.message} />
+                </div>
+                <div className="md:col-span-2">
+                  <label
+                    className="block text-xs font-semibold text-foreground mb-1.5"
+                    htmlFor="businessAddress"
+                  >
+                    Business Address <span className="text-red-500">*</span>
+                  </label>
+                  <textarea
+                    id="businessAddress"
+                    rows={3}
+                    {...register("businessAddress", {
+                      required: "Business address is required",
+                    })}
+                    placeholder="Full business address including street, city, state, and PIN code..."
+                    data-ocid="collab.form.business_address.textarea"
                     className="w-full px-3.5 py-2.5 rounded-lg border border-input bg-background text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring/50 transition-shadow resize-none"
                   />
-                  <FieldError message={errors.productSummary?.message} />
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                  <div>
-                    <label
-                      className="block text-xs font-semibold text-foreground mb-1.5"
-                      htmlFor="quantity"
-                    >
-                      Initial Quantity <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      id="quantity"
-                      type="number"
-                      min={1}
-                      {...register("quantity", {
-                        required: "Quantity is required",
-                        min: { value: 1, message: "Minimum quantity is 1" },
-                        valueAsNumber: true,
-                      })}
-                      placeholder="500"
-                      data-ocid="collab.form.quantity.input"
-                      className="w-full px-3.5 py-2.5 rounded-lg border border-input bg-background text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring/50 transition-shadow"
-                    />
-                    <FieldError message={errors.quantity?.message} />
-                  </div>
-                  <div>
-                    <label
-                      className="block text-xs font-semibold text-foreground mb-1.5"
-                      htmlFor="unitPrice"
-                    >
-                      Unit Price (USD) <span className="text-red-500">*</span>
-                    </label>
-                    <div className="relative">
-                      <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
-                        $
-                      </span>
-                      <input
-                        id="unitPrice"
-                        type="number"
-                        min={0.01}
-                        step={0.01}
-                        {...register("unitPrice", {
-                          required: "Unit price is required",
-                          min: {
-                            value: 0.01,
-                            message: "Price must be greater than 0",
-                          },
-                          valueAsNumber: true,
-                        })}
-                        placeholder="29.99"
-                        data-ocid="collab.form.unit_price.input"
-                        className="w-full pl-7 pr-3.5 py-2.5 rounded-lg border border-input bg-background text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring/50 transition-shadow"
-                      />
-                    </div>
-                    <FieldError message={errors.unitPrice?.message} />
-                  </div>
+                  <FieldError message={errors.businessAddress?.message} />
                 </div>
               </div>
             </div>
 
-            {/* Section 3: Documents */}
-            <div className="bg-white border border-border rounded-xl overflow-hidden mb-7">
+            {/* Section 2: Product Categories */}
+            <div className="bg-card border border-border rounded-xl overflow-hidden mb-5">
               <div className="px-6 py-4 bg-muted/40 border-b border-border">
                 <h2 className="text-sm font-semibold text-foreground">
-                  Documents &amp; Assets
+                  Product Categories
                 </h2>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  Upload your company logo and any relevant certifications
+                  Select all mobile accessory categories you will sell
+                </p>
+              </div>
+              <div className="px-6 py-5">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {MOBILE_CATEGORIES.map((cat) => (
+                    <label
+                      key={cat}
+                      className={`flex items-center gap-3 px-4 py-3 rounded-lg border cursor-pointer transition-all duration-200 ${
+                        selectedCategories.includes(cat)
+                          ? "border-primary bg-primary/5"
+                          : "border-border hover:border-primary/40 hover:bg-muted/30"
+                      }`}
+                      data-ocid={`collab.form.category.${cat
+                        .replace(/\s+/g, "_")
+                        .toLowerCase()}.checkbox`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={selectedCategories.includes(cat)}
+                        onChange={() => toggleCategory(cat)}
+                        className="w-4 h-4 rounded border-border text-primary focus:ring-primary/50"
+                      />
+                      <span className="text-sm text-foreground">{cat}</span>
+                    </label>
+                  ))}
+                </div>
+                {errors.categories && (
+                  <p
+                    className="flex items-center gap-1.5 mt-2 text-xs text-red-600"
+                    data-ocid="form.field_error"
+                  >
+                    <AlertCircle className="w-3 h-3 flex-shrink-0" />
+                    {errors.categories.message}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {/* Section 3: Bank Details */}
+            <div className="bg-card border border-border rounded-xl overflow-hidden mb-7">
+              <div className="px-6 py-4 bg-muted/40 border-b border-border">
+                <h2 className="text-sm font-semibold text-foreground">
+                  Bank Details
+                </h2>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  For payment settlements
                 </p>
               </div>
               <div className="px-6 py-5 grid grid-cols-1 md:grid-cols-2 gap-5">
-                {/* Logo Upload */}
                 <div>
                   <label
-                    htmlFor="logo-upload"
                     className="block text-xs font-semibold text-foreground mb-1.5"
+                    htmlFor="bankAccountNumber"
                   >
-                    Company Logo
+                    Account Number <span className="text-red-500">*</span>
                   </label>
-                  <button
-                    type="button"
-                    onClick={() => logoRef.current?.click()}
-                    onDragOver={(e) => {
-                      e.preventDefault();
-                      setLogoOver(true);
-                    }}
-                    onDragLeave={() => setLogoOver(false)}
-                    onDrop={(e) => handleFileDrop(e, setLogoFile, setLogoOver)}
-                    data-ocid="collab.form.logo.upload_button"
-                    className={`w-full flex flex-col items-center justify-center gap-2 h-28 rounded-xl border-2 border-dashed cursor-pointer transition-all duration-200 ${
-                      logoOver
-                        ? "border-indigo-400 bg-indigo-50"
-                        : "border-border hover:border-indigo-300 hover:bg-indigo-50/40"
-                    }`}
-                  >
-                    <Upload
-                      className="w-5 h-5 text-muted-foreground"
-                      strokeWidth={1.75}
-                    />
-                    {logoFile ? (
-                      <p className="text-xs text-indigo-600 font-medium text-center px-3 truncate max-w-full">
-                        {logoFile.name}
-                      </p>
-                    ) : (
-                      <>
-                        <p className="text-xs text-muted-foreground text-center">
-                          Drop your logo here
-                        </p>
-                        <p className="text-xs text-muted-foreground/60">
-                          PNG, SVG or JPG · max 5MB
-                        </p>
-                      </>
-                    )}
-                  </button>
                   <input
-                    id="logo-upload"
-                    ref={logoRef}
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={(e) => setLogoFile(e.target.files?.[0] ?? null)}
+                    id="bankAccountNumber"
+                    {...register("bankAccountNumber", {
+                      required: "Account number is required",
+                    })}
+                    placeholder="123456789012"
+                    data-ocid="collab.form.bank_account.input"
+                    className="w-full px-3.5 py-2.5 rounded-lg border border-input bg-background text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring/50 transition-shadow"
                   />
+                  <FieldError message={errors.bankAccountNumber?.message} />
                 </div>
-
-                {/* Certificate Upload */}
                 <div>
                   <label
-                    htmlFor="cert-upload"
                     className="block text-xs font-semibold text-foreground mb-1.5"
+                    htmlFor="bankIfscCode"
                   >
-                    Patent / Certificate
+                    IFSC Code <span className="text-red-500">*</span>
                   </label>
-                  <button
-                    type="button"
-                    onClick={() => certRef.current?.click()}
-                    onDragOver={(e) => {
-                      e.preventDefault();
-                      setCertOver(true);
-                    }}
-                    onDragLeave={() => setCertOver(false)}
-                    onDrop={(e) => handleFileDrop(e, setCertFile, setCertOver)}
-                    data-ocid="collab.form.certificate.upload_button"
-                    className={`w-full flex flex-col items-center justify-center gap-2 h-28 rounded-xl border-2 border-dashed cursor-pointer transition-all duration-200 ${
-                      certOver
-                        ? "border-indigo-400 bg-indigo-50"
-                        : "border-border hover:border-indigo-300 hover:bg-indigo-50/40"
-                    }`}
-                  >
-                    <FileText
-                      className="w-5 h-5 text-muted-foreground"
-                      strokeWidth={1.75}
-                    />
-                    {certFile ? (
-                      <p className="text-xs text-indigo-600 font-medium text-center px-3 truncate max-w-full">
-                        {certFile.name}
-                      </p>
-                    ) : (
-                      <>
-                        <p className="text-xs text-muted-foreground text-center">
-                          Drop your document here
-                        </p>
-                        <p className="text-xs text-muted-foreground/60">
-                          PDF, PNG or JPG · max 10MB
-                        </p>
-                      </>
-                    )}
-                  </button>
                   <input
-                    id="cert-upload"
-                    ref={certRef}
-                    type="file"
-                    accept=".pdf,image/*"
-                    className="hidden"
-                    onChange={(e) => setCertFile(e.target.files?.[0] ?? null)}
+                    id="bankIfscCode"
+                    {...register("bankIfscCode", {
+                      required: "IFSC code is required",
+                    })}
+                    placeholder="SBIN0001234"
+                    data-ocid="collab.form.bank_ifsc.input"
+                    className="w-full px-3.5 py-2.5 rounded-lg border border-input bg-background text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring/50 transition-shadow"
                   />
+                  <FieldError message={errors.bankIfscCode?.message} />
                 </div>
               </div>
             </div>
 
             {/* Submit */}
-            <div className="flex items-center justify-between gap-4">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
               <p className="text-xs text-muted-foreground">
                 By submitting, you agree to MAW's vendor terms and conditions.
               </p>
               <button
                 type="submit"
-                disabled={submitting}
+                disabled={createMutation.isPending}
                 data-ocid="collab.form.submit_button"
-                className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-60 text-white font-semibold px-8 py-3 rounded-xl text-sm transition-all duration-200 shadow-md shadow-indigo-500/25 min-w-[180px] justify-center"
+                className="flex items-center gap-2 bg-primary hover:bg-primary/90 disabled:opacity-60 text-primary-foreground font-semibold px-8 py-3 rounded-xl text-sm transition-all duration-200 shadow-md shadow-primary/25 min-w-[180px] justify-center"
               >
-                {submitting ? (
+                {createMutation.isPending ? (
                   <>
                     <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                     Submitting…

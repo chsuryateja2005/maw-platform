@@ -136,8 +136,12 @@ export interface Product {
   stock: bigint;
   imageUrl: string;
   category: string;
+  brand: string;
+  company: string;
   rating: number;
   price: number;
+  originalPrice: number;
+  discountPercent: bigint;
 }
 
 export interface User {

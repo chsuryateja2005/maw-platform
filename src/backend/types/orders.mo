@@ -24,6 +24,7 @@ module {
     items : [OrderItem];
     total : Float;
     status : OrderStatus;
+    deliveryAddress : Text;
     createdAt : Types.Timestamp;
   };
 };

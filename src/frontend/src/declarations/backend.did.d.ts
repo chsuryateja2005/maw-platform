@@ -10,9 +10,18 @@ import type { ActorMethod } from '@icp-sdk/core/agent';
 import type { IDL } from '@icp-sdk/core/candid';
 import type { Principal } from '@icp-sdk/core/principal';
 
+export interface Address {
+  'tag' : string,
+  'street' : string,
+  'country' : string,
+  'city' : string,
+  'postalCode' : string,
+  'isDefault' : boolean,
+}
 export type ApprovalStatus = { 'pending' : null } |
   { 'approved' : null } |
   { 'rejected' : null };
+export interface CartItem { 'productId' : string, 'quantity' : bigint }
 export interface Delivery {
   'id' : bigint,
   'customerName' : string,
@@ -26,9 +35,20 @@ export type DeliveryStatus = { 'assigned' : null } |
   { 'in_transit' : null } |
   { 'delivered' : null } |
   { 'failed' : null };
+export interface Issue {
+  'id' : string,
+  'status' : IssueStatus,
+  'subject' : string,
+  'createdAt' : Timestamp,
+  'description' : string,
+  'customerId' : string,
+}
+export type IssueStatus = { 'resolved' : null } |
+  { 'pending' : null };
 export interface Order {
   'id' : bigint,
   'status' : OrderStatus,
+  'deliveryAddress' : string,
   'total' : number,
   'userId' : UserId,
   'createdAt' : Timestamp,
@@ -49,11 +69,28 @@ export type OrderStatus = { 'shipped' : null } |
   { 'returned' : null };
 export interface Product {
   'id' : bigint,
+  'originalPrice' : number,
   'name' : string,
   'description' : string,
+  'discountPercent' : bigint,
+  'company' : string,
   'stock' : bigint,
   'imageUrl' : string,
   'category' : string,
+  'brand' : string,
+  'rating' : number,
+  'price' : number,
+}
+export interface ProductInput {
+  'originalPrice' : number,
+  'name' : string,
+  'description' : string,
+  'discountPercent' : bigint,
+  'company' : string,
+  'stock' : bigint,
+  'imageUrl' : string,
+  'category' : string,
+  'brand' : string,
   'rating' : number,
   'price' : number,
 }
@@ -69,6 +106,13 @@ export type ShipmentStatus = { 'dispatched' : null } |
   { 'arriving' : null } |
   { 'processing' : null } |
   { 'received' : null };
+export type SortBy = { 'newest' : null } |
+  { 'company' : null } |
+  { 'category' : null } |
+  { 'brand' : null } |
+  { 'priceDesc' : null } |
+  { 'rating' : null } |
+  { 'priceAsc' : null };
 export interface Ticket {
   'id' : bigint,
   'customerName' : string,
@@ -110,28 +154,79 @@ export interface Vendor {
   'companyName' : string,
   'brandName' : string,
 }
+export interface VendorRequest {
+  'id' : bigint,
+  'categories' : Array<string>,
+  'status' : VendorStatus,
+  'ownerName' : string,
+  'bankDetails' : string,
+  'gstNumber' : string,
+  'submittedAt' : Timestamp,
+  'businessAddress' : string,
+  'email' : string,
+  'companyName' : string,
+  'brandName' : string,
+  'phone' : string,
+}
+export interface VendorRequestInput {
+  'categories' : Array<string>,
+  'ownerName' : string,
+  'bankDetails' : string,
+  'gstNumber' : string,
+  'businessAddress' : string,
+  'email' : string,
+  'companyName' : string,
+  'brandName' : string,
+  'phone' : string,
+}
 export type VendorStatus = { 'pending' : null } |
   { 'approved' : null } |
   { 'rejected' : null };
 export interface _SERVICE {
   '_initializeAccessControl' : ActorMethod<[], undefined>,
   'assignCallerUserRole' : ActorMethod<[Principal, UserRole], undefined>,
+  'createIssue' : ActorMethod<[string, string], Issue>,
+  'createOrder' : ActorMethod<[Array<OrderItem>, string], Order>,
+  'createProduct' : ActorMethod<[ProductInput], Product>,
+  'createVendorRequest' : ActorMethod<[VendorRequestInput], VendorRequest>,
+  'deleteAddress' : ActorMethod<[bigint], Array<Address>>,
+  'deleteProduct' : ActorMethod<[bigint], boolean>,
   'getCallerUserRole' : ActorMethod<[], UserRole>,
   'getDeliveries' : ActorMethod<[], Array<Delivery>>,
+  'getIssues' : ActorMethod<[], Array<Issue>>,
+  'getMyIssues' : ActorMethod<[], Array<Issue>>,
+  'getOrderById' : ActorMethod<[bigint], [] | [Order]>,
   'getOrders' : ActorMethod<[], Array<Order>>,
-  'getProducts' : ActorMethod<[], Array<Product>>,
+  'getProductById' : ActorMethod<[bigint], [] | [Product]>,
+  'getProducts' : ActorMethod<
+    [[] | [string], [] | [string], [] | [SortBy]],
+    Array<Product>
+  >,
   'getShipments' : ActorMethod<[], Array<Shipment>>,
   'getTickets' : ActorMethod<[], Array<Ticket>>,
+  'getUserAddresses' : ActorMethod<[], Array<Address>>,
+  'getUserCart' : ActorMethod<[], Array<CartItem>>,
+  'getUserWishlist' : ActorMethod<[], Array<string>>,
+  'getVendorRequests' : ActorMethod<[], Array<VendorRequest>>,
   'getVendors' : ActorMethod<[], Array<Vendor>>,
   'isCallerAdmin' : ActorMethod<[], boolean>,
   'isCallerApproved' : ActorMethod<[], boolean>,
   'listApprovals' : ActorMethod<[], Array<UserApprovalInfo>>,
   'requestApproval' : ActorMethod<[], undefined>,
+  'saveAddress' : ActorMethod<[Address], Array<Address>>,
+  'saveCartItems' : ActorMethod<[Array<CartItem>], undefined>,
   'setApproval' : ActorMethod<[Principal, ApprovalStatus], undefined>,
+  'toggleWishlistItem' : ActorMethod<[string], Array<string>>,
   'updateDeliveryStatus' : ActorMethod<[bigint, DeliveryStatus], undefined>,
+  'updateIssueStatus' : ActorMethod<[string, IssueStatus], boolean>,
   'updateOrderStatus' : ActorMethod<[bigint, OrderStatus], undefined>,
+  'updateProduct' : ActorMethod<[bigint, ProductInput], [] | [Product]>,
   'updateShipmentStatus' : ActorMethod<[bigint, ShipmentStatus], undefined>,
   'updateTicketStatus' : ActorMethod<[bigint, TicketStatus], undefined>,
+  'updateVendorRequestStatus' : ActorMethod<
+    [bigint, VendorStatus],
+    [] | [VendorRequest]
+  >,
   'updateVendorStatus' : ActorMethod<[bigint, VendorStatus], undefined>,
 }
 export declare const idlService: IDL.ServiceClass;
